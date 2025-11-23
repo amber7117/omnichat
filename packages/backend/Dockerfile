@@ -46,14 +46,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# 运行时只需要证书
+# 运行时需要 openssl (Prisma) 和 git (npm install 可能需要)
 RUN set -eux; \
     if [ -f /etc/apt/sources.list ]; then \
       sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list; \
     fi; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      ca-certificates; \
+      ca-certificates \
+      openssl \
+      git; \
     rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
