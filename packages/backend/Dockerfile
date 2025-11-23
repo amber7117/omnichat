@@ -46,7 +46,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# 运行时需要 openssl (Prisma) 和 git (npm install 可能需要)
+# 运行时需要 openssl (Prisma), git (npm install 可能需要), 和 pnpm (如果应用需要)
 RUN set -eux; \
     if [ -f /etc/apt/sources.list ]; then \
       sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list; \
@@ -56,7 +56,8 @@ RUN set -eux; \
       ca-certificates \
       openssl \
       git; \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/*; \
+    npm install -g pnpm
 
 COPY package*.json ./
 RUN npm install --omit=dev
@@ -66,4 +67,4 @@ COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3001
 
-CMD ["node", "dist/server.js"]
+CMD ["npm", "start"]
