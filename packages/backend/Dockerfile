@@ -1,29 +1,67 @@
-# 使用 Node.js 官方镜像
-FROM node:20-slim
+# syntax=docker/dockerfile:1
 
-# 安装 OpenSSL (Prisma 需要) 和构建工具 (bcrypt 需要)
-RUN apt-get update -y && apt-get install -y openssl python3 make g++ && rm -rf /var/lib/apt/lists/*
+########################
+# 1. 构建阶段 (builder)
+########################
+FROM node:20-slim AS builder
 
-# 设置工作目录
 WORKDIR /app
 
-# 复制 package.json
-COPY package.json ./
+# 1) 修正源为 https 并安装 git + ca-certificates
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list ]; then \
+      sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      git \
+      ca-certificates; \
+    rm -rf /var/lib/apt/lists/*
 
-# 安装依赖
-RUN npm install
+# 2) 只复制依赖声明，利用缓存
+COPY package*.json ./
+COPY prisma ./prisma
 
-# 复制源代码
+# 3) 安装依赖（加日志输出，失败时打印 npm 日志）
+RUN set -eux; \
+    npm install || (echo '===== NPM LOG START =====' && \
+                    ls -R /root/.npm/_logs || true && \
+                    cat /root/.npm/_logs/*-debug-0.log || true && \
+                    echo '===== NPM LOG END =====' && \
+                    exit 1)
+
+# 4) 复制完整源码
 COPY . .
 
-# 生成 Prisma Client
-RUN npx prisma generate
-
-# 编译 TypeScript
+# 5) 编译 TypeScript
 RUN npm run build
 
-# 暴露端口
+########################
+# 2. 运行阶段 (runtime)
+########################
+FROM node:20-slim
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# 运行时只需要证书
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list ]; then \
+      sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      ca-certificates; \
+    rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
 EXPOSE 3001
 
-# 启动命令
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
