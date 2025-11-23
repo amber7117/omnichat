@@ -1,21 +1,29 @@
+# 使用 Node.js 官方镜像
 FROM node:20-slim
 
+# 安装 OpenSSL (Prisma 需要) 和构建工具 (bcrypt 需要)
+RUN apt-get update -y && apt-get install -y openssl python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+# 设置工作目录
 WORKDIR /app
 
-# 先复制依赖文件
-COPY package*.json ./
+# 复制 package.json
+COPY package.json ./
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
-    rm -rf /var/lib/apt/lists/*
-
+# 安装依赖
 RUN npm install
 
-# 再复制项目源码
+# 复制源代码
 COPY . .
 
-# 构建 TypeScript
+# 生成 Prisma Client
+RUN npx prisma generate
+
+# 编译 TypeScript
 RUN npm run build
 
-# 启动
-CMD ["node", "dist/server.js"]
+# 暴露端口
+EXPOSE 3001
+
+# 启动命令
+CMD ["npm", "start"]
