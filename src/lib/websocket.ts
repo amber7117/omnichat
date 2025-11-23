@@ -14,17 +14,20 @@ class WebSocketService {
   private connect(): void {
     try {
       // Get API URL - handle both browser and Node.js environments
-      let apiUrl = 'http://localhost:3001';
+      let apiUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
       
-      if (typeof import.meta !== 'undefined' && import.meta.env.VITE_API_BASE_URL) {
-        apiUrl = import.meta.env.VITE_API_BASE_URL;
-      } else if (typeof window !== 'undefined' && window.__APP_CONFIG__?.apiUrl) {
+      if (typeof window !== 'undefined' && window.__APP_CONFIG__?.apiUrl) {
         apiUrl = window.__APP_CONFIG__.apiUrl;
       } else if (typeof process !== 'undefined' && process.env.REACT_APP_API_URL) {
         apiUrl = process.env.REACT_APP_API_URL;
       }
 
-      this.socket = io(apiUrl, {
+      // Remove /api suffix if present to get the base URL
+      if (apiUrl && apiUrl.endsWith('/api')) {
+        apiUrl = apiUrl.slice(0, -4);
+      }
+
+      this.socket = io(apiUrl || undefined, {
         transports: ['websocket', 'polling'],
         timeout: 20000,
       });

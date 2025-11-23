@@ -254,7 +254,7 @@ export function PlatformsPage() {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">平台集成管理</h1>
+              <h1 className="text-2xl font-bold">渠道管理</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 管理您的多渠道连接 • 工作区: <span className="font-medium text-foreground">{tenantName}</span>
               </p>

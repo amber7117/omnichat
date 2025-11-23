@@ -777,13 +777,14 @@ export async function fetchTelegramStatus(
       updatedAt?: string;
     }
     
+    // Use the new route structure: /api/telegram/:channelId/status
     const response = await apiGet<{
       ok: boolean;
       status?: string;
       platform?: TelegramPlatform;
       error?: string;
     }>(
-      `/api/tenants/${tid}/telegram/${channelId}/status`
+      `/api/telegram/${channelId}/status`
     );
 
     if (response.ok && response.status === 'connected' && response.platform) {

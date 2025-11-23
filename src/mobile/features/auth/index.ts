@@ -1,0 +1,1 @@
+export { mobileAuthExtension } from './extensions';

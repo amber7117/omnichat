@@ -120,7 +120,7 @@ export function ChannelCard({
   const [savingBind, setSavingBind] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const API_BASE = (import.meta as any)?.env?.VITE_API_BASE_URL || "http://localhost:3001";
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
   const authHeaders = (): HeadersInit => {
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     const headers: HeadersInit = { "Content-Type": "application/json" };

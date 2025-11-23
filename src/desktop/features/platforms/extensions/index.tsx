@@ -24,7 +24,7 @@ export const desktopPlatformsExtension = defineExtension({
         })))
         subscriptions.push(Disposable.from(getPresenter().activityBar.addItem({
             id: "platforms",
-            label: "平台集成",
+            label: "添加渠道",
             title: "Platform Integration",
             group: "main",
             icon: "settings",

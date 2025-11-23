@@ -46,7 +46,7 @@ export class AgentService {
   }
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 
 function getToken(): string | null {
   return typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;

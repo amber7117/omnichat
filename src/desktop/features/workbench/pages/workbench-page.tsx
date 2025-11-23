@@ -32,7 +32,7 @@ interface MessageItem {
   status?: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 
 const channelBadgeMap: Record<string, { label: string; variant?: "default" | "secondary" | "outline"; className?: string }> = {
   WHATSAPP: { label: "WhatsApp", className: "bg-green-100 text-green-700" },

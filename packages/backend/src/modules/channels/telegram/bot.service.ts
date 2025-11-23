@@ -120,3 +120,35 @@ function extractAttachments(message: any): InboundAttachment[] {
 
   return attachments;
 }
+
+export async function getBotStatus(channelInstanceId: string) {
+  const channel = await prisma.channelInstance.findUnique({
+    where: { id: channelInstanceId },
+  });
+
+  if (!channel) {
+    return { ok: false, error: 'Channel not found' };
+  }
+
+  // Check if we have a bot instance in memory
+  const bot = resolveBot(channelInstanceId);
+  const isConnected = !!bot;
+
+  // If not in memory but has token, try to initialize it to check validity?
+  // For now, just return the DB status or memory status
+
+  return {
+    ok: true,
+    status: isConnected ? 'connected' : 'disconnected',
+    platform: {
+      id: channel.id,
+      tenantId: channel.tenantId,
+      name: channel.name,
+      type: channel.type,
+      status: isConnected ? 'connected' : 'disconnected',
+      config: channel.config,
+      createdAt: channel.createdAt,
+      updatedAt: channel.updatedAt,
+    }
+  };
+}

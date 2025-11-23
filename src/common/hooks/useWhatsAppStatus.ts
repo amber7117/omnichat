@@ -38,8 +38,9 @@ export function useWhatsAppStatus({
     }
 
     try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
       const response = await fetch(
-        `http://localhost:3001/api/v1/channels/${channelId}/whatsapp/status`
+        `${API_BASE_URL}/api/v1/channels/${channelId}/whatsapp/status`
       );
       
       if (!response.ok) {

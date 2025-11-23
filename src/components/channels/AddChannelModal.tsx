@@ -166,7 +166,7 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
   const initializeWhatsAppConnection = async (channelId: string) => {
     try {
       // 建立 WebSocket 连接
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
       const socketUrl = API_BASE_URL.replace('/api', '');
       console.log(`🔌 连接WebSocket: ${socketUrl}`);
       const socket = io(socketUrl);
