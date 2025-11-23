@@ -36,6 +36,9 @@ COPY . .
 # 5) 编译 TypeScript
 RUN npm run build
 
+# 检查 dist 目录结构 (调试用)
+RUN ls -R dist
+
 ########################
 # 2. 运行阶段 (runtime)
 ########################

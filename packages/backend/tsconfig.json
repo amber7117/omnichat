@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "strict": true,
-    // "rootDir": "src",
+    "rootDir": "src",
     "outDir": "dist",
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -15,6 +15,6 @@
     "skipLibCheck": true,
     "typeRoots": ["./src/types", "./node_modules/@types"]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "api/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["dist", "node_modules"]
 }
