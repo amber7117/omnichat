@@ -67,6 +67,7 @@ RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 
 EXPOSE 3001
 
