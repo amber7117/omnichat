@@ -1,0 +1,20 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/common/components/*"],
+      "@/lib/*": ["src/lib/*"],
+      "@cardos/service-bus-portal": ["packages/service-bus-portal/src/index.ts"]
+    },
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}

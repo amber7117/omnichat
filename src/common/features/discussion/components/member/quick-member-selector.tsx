@@ -1,0 +1,109 @@
+import { Button } from "@/common/components/ui/button";
+import { AGENT_COMBINATIONS, AgentCombinationType } from "@/core/config/agents";
+import { useAgents } from "@/core/hooks/useAgents";
+import { usePresenter } from "@/core/presenter";
+import { cn } from "@/common/lib/utils";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/core/hooks/use-toast";
+
+interface QuickMemberSelectorProps {
+  onSelect?: () => void;
+  onMembersChange?: (members: string[]) => void;
+}
+
+export function QuickMemberSelector({ 
+  onSelect,
+  onMembersChange
+}: QuickMemberSelectorProps) {
+  const presenter = usePresenter();
+  const { agents } = useAgents();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState<AgentCombinationType | null>(null);
+
+  const handleSelect = async (type: AgentCombinationType) => {
+    if (loading) return;
+    setLoading(type);
+
+    try {
+      const combination = AGENT_COMBINATIONS[type];
+      if (!combination) return;
+
+      // 查找主持人和参与者（基于 slug）
+      const moderatorSlug = combination.moderator as unknown as string;
+      const moderatorAgent = agents.find(a => a.role === "moderator" && a.slug === moderatorSlug);
+      const participantAgents = (combination.participants as unknown as string[])
+        .map(slug => agents.find(a => a.role === "participant" && a.slug === slug))
+        .filter(Boolean);
+
+      // 准备所有要添加的成员
+      const membersToAdd = [];
+      const newMemberIds = [];
+      
+      if (moderatorAgent) {
+        membersToAdd.push({ agentId: moderatorAgent.id, isAutoReply: true });
+        newMemberIds.push(moderatorAgent.id);
+      }
+
+      participantAgents.forEach(agent => {
+        if (agent) {
+          membersToAdd.push({ agentId: agent.id, isAutoReply: false });
+          newMemberIds.push(agent.id);
+        }
+      });
+
+      if (membersToAdd.length === 0) {
+        throw new Error('没有找到可添加的成员');
+      }
+
+      // 如果提供了 onMembersChange，则调用它
+      if (onMembersChange) {
+        onMembersChange(newMemberIds);
+      } else {
+        // 否则使用原有的添加成员逻辑
+        await presenter.discussionMembers.addMany(membersToAdd);
+      }
+      
+      onSelect?.();
+    } catch (error) {
+      console.error('Error adding members:', error);
+      toast?.({
+        title: "添加成员失败",
+        description: error instanceof Error ? error.message : "未知错误",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2.5">
+      {Object.entries(AGENT_COMBINATIONS).map(([type, { name, description }]) => {
+        const isLoading = loading === type;
+        return (
+          <Button
+            key={type}
+            variant="outline"
+            className={cn(
+              "w-full h-auto py-3.5 px-4 flex flex-col items-start gap-1.5",
+              "hover:bg-muted/60 hover:border-border/80 transition-all",
+              "rounded-xl border-border/60",
+              isLoading && "pointer-events-none opacity-60"
+            )}
+            onClick={() => handleSelect(type as AgentCombinationType)}
+            disabled={isLoading}
+          >
+            <div className="flex items-center gap-2 w-full">
+              <div className="font-semibold text-sm text-foreground">{name}</div>
+              {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-auto" />}
+            </div>
+            <div className="text-xs text-muted-foreground text-left line-clamp-2 w-full leading-relaxed">
+              {description}
+            </div>
+          </Button>
+        );
+      })}
+    </div>
+  );
+} 

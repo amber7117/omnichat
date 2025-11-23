@@ -1,0 +1,1 @@
+export { desktopAuthExtension } from './extensions';

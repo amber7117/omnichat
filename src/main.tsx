@@ -1,0 +1,51 @@
+import { TooltipProvider } from "@/common/components/ui/tooltip.tsx";
+import { Toaster } from "@/common/components/ui/toaster";
+import {
+  discussionMembersResource,
+  discussionsResource,
+  messagesResource,
+} from "@/core/resources/index.ts";
+import { discussionControlService } from "@/core/services/discussion-control.service.ts";
+import { discussionMemberService } from "@/core/services/discussion-member.service.ts";
+import { discussionService } from "@/core/services/discussion.service.ts";
+import React, { Suspense } from "react";
+import ReactDOM from "react-dom/client";
+import { App } from "./App.tsx";
+import { AppLoading } from "@/common/features/app/components/app-loading";
+import { ThemeProvider } from "@/common/components/common/theme/context";
+import { ModalProvider } from "@/common/components/ui/modal/provider";
+import { SettingsDialogBridge } from "@/common/features/settings/components/settings-dialog/settings-dialog-bridge";
+import { ClientBreakpointProvider } from "@/common/components/common/client-breakpoint-provider";
+import { PresenterProvider } from "@/core/presenter/presenter-context";
+import { AuthProvider } from "@/common/features/auth/auth-context";
+import "./core/styles/theme.css";
+import "./index.css";
+
+window.discussionService = discussionService;
+window.discussionControlService = discussionControlService;
+window.discussionMemberService = discussionMemberService;
+window.discussionsResource = discussionsResource;
+window.discussionMembersResource = discussionMembersResource;
+window.messagesResource = messagesResource;
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <Suspense fallback={<AppLoading />}>
+      <TooltipProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ClientBreakpointProvider>
+              <ModalProvider>
+                <PresenterProvider>
+                  <SettingsDialogBridge />
+                  <App />
+                  <Toaster />
+                </PresenterProvider>
+              </ModalProvider>
+            </ClientBreakpointProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </TooltipProvider>
+    </Suspense>
+  </React.StrictMode>
+);

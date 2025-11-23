@@ -1,0 +1,331 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChannelType {
+  WHATSAPP
+  TELEGRAM_USER
+  TELEGRAM_BOT
+  FACEBOOK
+  WIDGET
+}
+
+enum ChannelConnectionStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  ERROR
+}
+
+enum ConversationStatus {
+  OPEN
+  CLOSED
+  SNOOZED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  SYSTEM
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum QueueStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  DEAD
+}
+
+enum AgentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Tenant {
+  id                     String                 @id @default(uuid())
+  name                   String
+  users                  User[]
+  channelInstances       ChannelInstance[]
+  customers              Customer[]
+  conversations          Conversation[]
+  messages               Message[]
+  agents                 Agent[]
+  agentTeams             AgentTeam[]
+  refreshTokens          RefreshToken[]
+  channelMessageQueue    ChannelMessageQueue[]
+  whatsappSessions       WhatsAppSession[]
+  whatsappKeys           WhatsAppKey[]
+  telegramSessions       TelegramSession[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+}
+
+model User {
+  id            String          @id @default(cuid())
+  tenantId      String
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email         String          @unique
+  passwordHash  String
+  name          String?
+  role          String          @default("member")
+  refreshTokens RefreshToken[]
+  messages      Message[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique // hashed token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Channel {
+  id          String            @id @default(cuid())
+  type        ChannelType
+  name        String
+  description String?
+  instances   ChannelInstance[]
+}
+
+model ChannelInstance {
+  id              String                    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelId       String?
+  channel         Channel?                  @relation(fields: [channelId], references: [id])
+  name            String
+  type            ChannelType
+  status          ChannelConnectionStatus   @default(DISCONNECTED)
+  metadata        Json?
+  config          Json?
+  externalId      String?
+  qrCode          String?
+  qrCodeExpiry    DateTime?
+  connectionAttempts Int                    @default(0)
+  lastConnectAttempt DateTime?
+  lastConnectedAt DateTime?
+  lastError       String?
+  lastErrorAt     DateTime?
+  customers       Customer[]
+  conversations   Conversation[]
+  messages        Message[]
+  queue           ChannelMessageQueue[]
+  whatsappSession WhatsAppSession[]
+  whatsappKeys    WhatsAppKey[]
+  telegramSession TelegramSession[]
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@index([tenantId, type])
+}
+
+model Customer {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelInstanceId  String
+  channelInstance    ChannelInstance   @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  externalId         String
+  externalUsername   String?
+  name               String?
+  profileImage       String?
+  language           String?
+  timezone           String?
+  tags               String[]
+  conversations      Conversation[]
+  lastContactedAt    DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([channelInstanceId, externalId])
+}
+
+model Conversation {
+  id                     String               @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelInstanceId      String
+  channelInstance        ChannelInstance      @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  customerId             String
+  customer               Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  externalConversationId String?
+  agentId                String?
+  agent                  Agent?               @relation(fields: [agentId], references: [id])
+  status                 ConversationStatus   @default(OPEN)
+  autoReplyEnabled       Boolean              @default(true)
+  autoReplyAgentId       String?
+  lastMessageAt          DateTime?
+  collaborations         AgentCollaboration[]
+  messages               Message[]
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@index([tenantId, channelInstanceId])
+}
+
+model Message {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversationId     String
+  conversation       Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  channelInstanceId  String
+  channelInstance    ChannelInstance   @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  direction          MessageDirection
+  status             MessageStatus     @default(QUEUED)
+  providerMessageId  String?
+  externalSenderId   String?
+  userId             String?
+  user               User?             @relation(fields: [userId], references: [id])
+  agentId            String?
+  agent              Agent?            @relation(fields: [agentId], references: [id])
+  text               String?
+  attachments        Json?
+  rawPayload         Json?
+  sentAt             DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  queueEntries       ChannelMessageQueue[]
+
+  @@index([tenantId, conversationId])
+}
+
+model Agent {
+  id            String                 @id @default(cuid())
+  tenantId      String
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  provider      String?
+  model         String?
+  prompt        String?
+  apiKey        String?
+  temperature   Float?                 @default(0.7)
+  maxTokens     Int?
+  toolConfig    Json?
+  status        AgentStatus            @default(ACTIVE)
+  teamMembers   AgentTeamMember[]
+  collaborations AgentCollaboration[]
+  conversations Conversation[]
+  messages      Message[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+}
+
+model AgentTeam {
+  id          String             @id @default(cuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  members     AgentTeamMember[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model AgentTeamMember {
+  id        String    @id @default(cuid())
+  agentId   String
+  agent     Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      AgentTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  role      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([agentId, teamId])
+}
+
+model AgentCollaboration {
+  id             String        @id @default(cuid())
+  agentId        String
+  agent          Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  step           String?
+  content        Json?
+  createdAt      DateTime      @default(now())
+}
+
+model ChannelMessageQueue {
+  id                String              @id @default(cuid())
+  tenantId          String
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelInstanceId String
+  channelInstance   ChannelInstance     @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  messageId         String?
+  message           Message?            @relation(fields: [messageId], references: [id])
+  payload           Json
+  status            QueueStatus         @default(PENDING)
+  retryCount        Int                 @default(0)
+  nextRetryAt       DateTime?
+  lastError         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status, nextRetryAt])
+}
+
+model WhatsAppSession {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelInstanceId String
+  channelInstance   ChannelInstance  @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  sessionId         String
+  data              Json
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([channelInstanceId, sessionId])
+}
+
+model WhatsAppKey {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelInstanceId String
+  channelInstance   ChannelInstance  @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  sessionId         String
+  keyId             String
+  data              Json
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([channelInstanceId, sessionId, keyId])
+}
+
+model TelegramSession {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelInstanceId String
+  channelInstance   ChannelInstance  @relation(fields: [channelInstanceId], references: [id], onDelete: Cascade)
+  sessionType       String
+  data              Json
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([channelInstanceId, sessionType])
+}

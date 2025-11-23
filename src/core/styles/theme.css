@@ -1,0 +1,25 @@
+/* Theme transition utility class */
+.theme-transition {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0.3s;
+  /* Optional: hint for smoother rendering */
+  /* will-change: background-color, color, border-color; */
+}
+
+/* Apply transition to direct children that commonly change with theme */
+.theme-transition > *,
+.theme-transition > * > * {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0.3s;
+}
+
+/* Respect user preference: disable animations if requested */
+@media (prefers-reduced-motion: reduce) {
+  .theme-transition,
+  .theme-transition > *,
+  .theme-transition > * > * {
+    transition: none !important;
+  }
+}
