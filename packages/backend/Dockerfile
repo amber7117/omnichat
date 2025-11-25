@@ -73,4 +73,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+CMD ["sh", "-c", "npx prisma db push && npm start"]
