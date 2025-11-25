@@ -76,6 +76,9 @@ model Tenant {
   telegramSessions       TelegramSession[]
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
+  subscriptionPlan       String                 @default("free") // free, pro, enterprise
+  subscriptionStatus     String                 @default("active") // active, past_due, canceled
+  maxChannels            Int                    @default(1)
 }
 
 model User {

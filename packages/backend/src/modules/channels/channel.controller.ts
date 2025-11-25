@@ -21,6 +21,28 @@ export const ChannelController = {
         res.status(401).json({ message: 'Unauthorized' });
         return;
       }
+
+      // Check subscription limits
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: req.auth.tenantId },
+        include: { channelInstances: true },
+      });
+
+      if (!tenant) {
+        res.status(404).json({ message: 'Tenant not found' });
+        return;
+      }
+
+      if (tenant.channelInstances.length >= tenant.maxChannels) {
+        res.status(403).json({
+          message: 'Channel limit reached. Please upgrade your plan to add more channels.',
+          code: 'LIMIT_REACHED',
+          current: tenant.channelInstances.length,
+          max: tenant.maxChannels,
+        });
+        return;
+      }
+
       const body = createSchema.parse(req.body);
       const channel = await createChannelInstance(req.auth.tenantId, {
         ...body,

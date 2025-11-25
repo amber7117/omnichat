@@ -11,7 +11,7 @@ export const pricingExtension = defineExtension({
         author: "OmniChat",
     },
     activate: ({ subscriptions }) => {
-        subscriptions.push(Disposable.from(getPresenter().route.addRoute({
+        subscriptions.push(Disposable.from(getPresenter().routeTree.addRoute({
             id: "pricing",
             path: "pricing",
             element: <PricingPage />,
