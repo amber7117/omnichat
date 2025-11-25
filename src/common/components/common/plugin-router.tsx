@@ -8,7 +8,6 @@ function renderRoutes(nodes: RouteNode[]): React.ReactNode {
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map(node => {
       const props: any = {
-        key: node.id,
         element: node.element,
       };
       if (node.index) {
@@ -18,7 +17,7 @@ function renderRoutes(nodes: RouteNode[]): React.ReactNode {
       }
 
       return (
-        <Route {...props}>
+        <Route key={node.id} {...props}>
           {node.children && renderRoutes(node.children)}
         </Route>
       );
