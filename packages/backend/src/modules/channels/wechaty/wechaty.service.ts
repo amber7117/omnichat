@@ -14,7 +14,7 @@ export function getWechatyBot(channelInstanceId: string): Wechaty | undefined {
 
 export async function bootstrapWechatyBots(): Promise<void> {
   const instances = await prisma.channelInstance.findMany({
-    where: { type: ChannelType.WECHAT, status: { in: ['CONNECTED', 'CONNECTING'] } },
+    where: { type: ChannelType.WECHATY, status: { in: ['CONNECTED', 'CONNECTING'] } },
   });
 
   for (const instance of instances) {
@@ -148,7 +148,7 @@ export async function createWechatyBot(channelInstanceId: string, tenantId: stri
       await handleInboundMessage({
         tenantId,
         channelInstanceId,
-        channelType: ChannelType.WECHAT,
+        channelType: ChannelType.WECHATY,
         externalUserId,
         externalConversationId,
         text,
