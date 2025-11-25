@@ -5,6 +5,7 @@ import { ChannelController } from './channel.controller';
 const router = Router();
 
 router.use(authMiddleware);
+router.get('/limits', ChannelController.getLimits);
 router.post('/', ChannelController.create);
 router.get('/', ChannelController.list);
 router.delete('/:id', ChannelController.delete);

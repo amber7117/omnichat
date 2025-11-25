@@ -147,4 +147,30 @@ export const ChannelController = {
       return next(err as Error);
     }
   },
+
+  async getLimits(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.auth) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: req.auth.tenantId },
+        include: { channelInstances: true },
+      });
+
+      if (!tenant) {
+        res.status(404).json({ message: 'Tenant not found' });
+        return;
+      }
+
+      res.json({
+        maxChannels: tenant.maxChannels,
+        currentChannels: tenant.channelInstances.length,
+        subscriptionPlan: tenant.subscriptionPlan,
+      });
+    } catch (err) {
+      return next(err as Error);
+    }
+  },
 };

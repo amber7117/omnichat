@@ -3,6 +3,7 @@
 // Updated: 2025-11-21 - Complete redesign with stats, filters, and enhanced UX
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/common/components/ui/button';
 import { Card, CardContent } from '@/common/components/ui/card';
 import { Badge } from '@/common/components/ui/badge';
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 import type { Platform, PlatformType, PlatformStatus } from '@/types/platform';
 import { fetchPlatforms, disconnectPlatform, deleteWhatsApp, connectWhatsApp, connectWechaty } from '@/api/platforms';
-import { apiDelete } from '@/api/client';
+import { apiDelete, apiGet } from '@/api/client';
 import { AddPlatformDialog } from '../components/add-platform-dialog';
 import { WhatsAppQRDialog } from '../components/whatsapp-qr-dialog';
 import { TelegramLoginDialog } from '../components/telegram-login-dialog';
@@ -44,6 +45,7 @@ import {
 
 export function PlatformsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const tenantId = user?.tenantId || 'default-tenant';
   const tenantName = user?.name || user?.email || 'Guest';
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -67,6 +69,24 @@ export function PlatformsPage() {
   const [whatsAppChannelId, setWhatsAppChannelId] = useState<string>('');
   // Wechaty channel state
   const [wechatyChannelId, setWechatyChannelId] = useState<string>('');
+
+  const handleAddPlatformClick = async () => {
+    try {
+      const response = await apiGet<{ maxChannels: number; currentChannels: number }>('/api/channels/limits');
+      if (response && typeof response.maxChannels === 'number') {
+        if (response.currentChannels >= response.maxChannels) {
+          if (confirm('Channel limit reached. Upgrade to add more channels?')) {
+            navigate('/pricing');
+          }
+          return;
+        }
+      }
+      setShowAddDialog(true);
+    } catch (error) {
+      console.error('Failed to check limits:', error);
+      setShowAddDialog(true);
+    }
+  };
 
   const loadPlatforms = useCallback(async () => {
     setLoading(true);
@@ -286,7 +306,7 @@ export function PlatformsPage() {
                 <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 {refreshing ? '刷新中...' : '刷新'}
               </Button>
-              <Button onClick={() => setShowAddDialog(true)} className="gap-2">
+              <Button onClick={handleAddPlatformClick} className="gap-2">
                 <Plus className="w-4 h-4" />
                 添加平台
               </Button>
@@ -421,7 +441,7 @@ export function PlatformsPage() {
                   点击右上角"添加平台"按钮，开始连接 WhatsApp、Telegram 等多渠道平台，
                   实现全渠道客户沟通。
                 </p>
-                <Button onClick={() => setShowAddDialog(true)} size="lg" className="gap-2">
+                <Button onClick={handleAddPlatformClick} size="lg" className="gap-2">
                   <Plus className="w-5 h-5" />
                   添加第一个平台
                 </Button>
