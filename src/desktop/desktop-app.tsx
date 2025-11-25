@@ -18,6 +18,7 @@ import { desktopPortalExtension } from "@/desktop/features/portal";
 import { desktopPlatformsExtension } from "@/desktop/features/platforms";
 import { desktopWorkbenchExtension } from "@/desktop/features/workbench/extensions";
 import { desktopAuthExtension } from "@/desktop/features/auth";
+import { pricingExtension } from "@/common/features/pricing/extensions";
 import { HashRouter, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/common/features/auth";
 import { useEffect } from "react";
@@ -37,6 +38,7 @@ export function DesktopAppInner() {
       desktopPortalExtension,
       desktopPlatformsExtension,
       desktopFileManagerExtension,
+      pricingExtension,
     ],
   });
   const { rootClassName } = useTheme();

@@ -4,7 +4,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../common/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../common/components/ui/dialog';
 import { Button } from '../../common/components/ui/button';
 import { Input } from '../../common/components/ui/input';
 import { Label } from '../../common/components/ui/label';
@@ -56,8 +57,10 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
   const [token, setToken] = useState('');
   const [encodingAESKey, setEncodingAESKey] = useState('');
   const [corpId, setCorpId] = useState('');
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const resetForm = () => {
     setName('');
@@ -137,8 +140,12 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
         resetForm();
         onClose();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('创建渠道失败:', err);
+      if (err.message?.includes('Channel limit reached') || err.response?.data?.code === 'LIMIT_REACHED') {
+        setShowUpgradeDialog(true);
+        return;
+      }
       setError(err instanceof Error ? err.message : '创建渠道失败');
     } finally {
       setIsLoading(false);
@@ -488,6 +495,30 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
       </div>
     </div>
   );
+
+  if (showUpgradeDialog) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade Plan Required</DialogTitle>
+            <DialogDescription>
+              You have reached the maximum number of channels for your current plan. Please upgrade to add more channels.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => {
+              onClose();
+              navigate('/pricing');
+            }}>
+              View Pricing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (showWhatsAppSetup) {
     return (
