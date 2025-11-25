@@ -1,4 +1,3 @@
-import { useBreakpointContext } from "@/common/components/common/breakpoint-provider";
 import { useTheme } from "@/common/components/common/theme";
 import { commonAgentsExtension } from "@/common/features/agents/extensions";
 import { settingsExtension } from "@/common/features/settings/extensions";

@@ -12,6 +12,7 @@ import { useViewportHeight } from "@/core/hooks/useViewportHeight";
 import { desktopAgentsExtension } from "@/desktop/features/agents/extensions";
 import { desktopChatExtension } from "@/desktop/features/chat/extensions";
 import { desktopMCPExtension } from "@/desktop/features/mcp/extensions";
+import { desktopPluginsExtension } from "@/desktop/features/plugins/extensions";
 import { desktopFileManagerExtension } from "@/desktop/features/file-manager/extensions";
 import { desktopPortalExtension } from "@/desktop/features/portal";
 import { desktopPlatformsExtension } from "@/desktop/features/platforms";
@@ -31,6 +32,7 @@ export function DesktopAppInner() {
       desktopChatExtension,
       desktopAgentsExtension,
       settingsExtension,
+      desktopPluginsExtension,
       desktopMCPExtension,
       desktopPortalExtension,
       desktopPlatformsExtension,

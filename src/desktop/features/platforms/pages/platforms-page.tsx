@@ -22,13 +22,16 @@ import {
   Filter
 } from 'lucide-react';
 import type { Platform, PlatformType, PlatformStatus } from '@/types/platform';
-import { fetchPlatforms, disconnectPlatform, deleteWhatsApp, connectWhatsApp } from '@/api/platforms';
+import { fetchPlatforms, disconnectPlatform, deleteWhatsApp, connectWhatsApp, connectWechaty } from '@/api/platforms';
 import { apiDelete } from '@/api/client';
 import { AddPlatformDialog } from '../components/add-platform-dialog';
 import { WhatsAppQRDialog } from '../components/whatsapp-qr-dialog';
 import { TelegramLoginDialog } from '../components/telegram-login-dialog';
 import { TelegramBotDialog } from '../components/telegram-bot-dialog';
 import { WebWidgetDialog } from '../components/web-widget-dialog';
+import { WeChatDialog } from '../components/wechat-dialog';
+import { WeComDialog } from '../components/wecom-dialog';
+import { WechatyDialog } from '../components/wechaty-dialog';
 import { useAuth } from '@/common/features/auth';
 import { ChannelCard } from '../../../../components/channels/ChannelCard';
 import {
@@ -56,17 +59,19 @@ export function PlatformsPage() {
   const [showTelegramLogin, setShowTelegramLogin] = useState(false);
   const [showTelegramBot, setShowTelegramBot] = useState(false);
   const [showWebWidget, setShowWebWidget] = useState(false);
+  const [showWeChat, setShowWeChat] = useState(false);
+  const [showWeCom, setShowWeCom] = useState(false);
+  const [showWechaty, setShowWechaty] = useState(false);
   
   // WhatsApp channel state
   const [whatsAppChannelId, setWhatsAppChannelId] = useState<string>('');
+  // Wechaty channel state
+  const [wechatyChannelId, setWechatyChannelId] = useState<string>('');
 
   const loadPlatforms = useCallback(async () => {
     setLoading(true);
-    console.log('[平台加载] 开始加载平台列表，tenantId:', tenantId);
     const result = await fetchPlatforms(tenantId);
-    console.log('[平台加载] API 返回结果:', result);
     if (result.ok && result.platforms) {
-      console.log('[平台加载] 解析的平台数据:', result.platforms);
       setPlatforms(result.platforms);
     } else {
       console.error('[平台加载] 加载失败:', result.error);
@@ -114,6 +119,25 @@ export function PlatformsPage() {
         break;
       case 'facebook':
         window.location.href = `/api/tenants/${tenantId}/facebook/platforms/facebook/login`;
+        break;
+      case 'wechat':
+        setShowWeChat(true);
+        break;
+      case 'wecom':
+        setShowWeCom(true);
+        break;
+      case 'wechaty':
+        try {
+          const result = await connectWechaty(tenantId);
+          if (result.ok && result.platform) {
+            setWechatyChannelId(result.platform.id);
+            setShowWechaty(true);
+          } else {
+            alert(`创建个人微信渠道失败: ${result.error}`);
+          }
+        } catch (error) {
+          alert(`创建个人微信渠道失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
         break;
     }
   };
@@ -179,12 +203,10 @@ export function PlatformsPage() {
 
   // 转换 Platform 到 Channel 格式
   const channelsFromPlatforms = filteredPlatforms.map(platform => {
-    console.log('[平台转换] 原始平台数据:', platform);
     
     // 将后端状态字符串映射为前端状态
     const mapStatus = (backendStatus: string): Platform['status'] => {
       const status = backendStatus?.toLowerCase();
-      console.log('[状态映射] 后端状态:', backendStatus, '-> 转换后:', status);
       
       switch (status) {
         case 'connected':
@@ -192,19 +214,16 @@ export function PlatformsPage() {
         case 'open':
         case 'ready':
         case 'authenticated':
-          console.log('[状态映射] 映射为 connected');
           return 'connected';
         case 'connecting':
         case 'initializing':
         case 'authenticating':
         case 'loading':
-          console.log('[状态映射] 映射为 connecting');
           return 'connecting';
         case 'error':
         case 'failed':
         case 'timeout':
         case 'unauthorized':
-          console.log('[状态映射] 映射为 error');
           return 'error';
         case 'disconnected':
         case 'closed':
@@ -212,13 +231,11 @@ export function PlatformsPage() {
         case 'close':
         case 'logout':
         default:
-          console.log('[状态映射] 映射为 disconnected (默认)');
           return 'disconnected';
       }
     };
 
     const finalStatus = mapStatus(platform.status || 'disconnected');
-    console.log('[平台转换] 最终状态:', finalStatus, '来源状态:', platform.status);
     
     return {
       id: platform.id,
@@ -365,6 +382,9 @@ export function PlatformsPage() {
                 <SelectItem value="telegram-bot">Telegram Bot</SelectItem>
                 <SelectItem value="widget">Web Widget</SelectItem>
                 <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="wechat">微信公众号</SelectItem>
+                <SelectItem value="wecom">企业微信</SelectItem>
+                <SelectItem value="wechaty">个人微信</SelectItem>
               </SelectContent>
             </Select>
 
@@ -445,10 +465,10 @@ export function PlatformsPage() {
                             ? await deleteWhatsApp(channel.id, false)
                             : await apiDelete<{ ok?: boolean; error?: string }>(`/api/channels/${channel.id}`);
 
-                        if (result && (result as any).ok !== false) {
+                        if (result && result.ok !== false) {
                           await refreshPlatforms();
                         } else {
-                          alert(`删除失败: ${(result as any)?.error || '未知错误'}`);
+                          alert(`删除失败: ${result?.error || '未知错误'}`);
                         }
                       } catch (err) {
                         alert(`删除失败: ${err instanceof Error ? err.message : '未知错误'}`);
@@ -512,6 +532,32 @@ export function PlatformsPage() {
         open={showWebWidget}
         onOpenChange={setShowWebWidget}
         platform={null}
+        tenantId={tenantId}
+      />
+
+      <WeChatDialog
+        open={showWeChat}
+        onOpenChange={setShowWeChat}
+        onConnected={refreshPlatforms}
+        tenantId={tenantId}
+      />
+
+      <WeComDialog
+        open={showWeCom}
+        onOpenChange={setShowWeCom}
+        onConnected={refreshPlatforms}
+        tenantId={tenantId}
+      />
+
+      <WechatyDialog
+        open={showWechaty}
+        onOpenChange={setShowWechaty}
+        onConnected={() => {
+          refreshPlatforms();
+          setTimeout(refreshPlatforms, 3000);
+          setShowWechaty(false);
+        }}
+        channelInstanceId={wechatyChannelId}
         tenantId={tenantId}
       />
     </div>

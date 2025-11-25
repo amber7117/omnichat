@@ -61,6 +61,31 @@ export function MessageItemWechat({
   // 检查消息是否为空
   const isEmpty = !message.content || message.content.trim() === '';
 
+  const renderAttachments = (attachments?: any[]) => {
+    if (!attachments || attachments.length === 0) return null;
+
+    return (
+      <div className="flex flex-col gap-2 mt-2">
+        {attachments.map((att, index) => {
+          if (att.type === 'image') {
+            return <img key={index} src={att.url} alt="attachment" className="max-w-full rounded-md" />;
+          }
+          if (att.type === 'video') {
+            return <video key={index} src={att.url} controls className="max-w-full rounded-md" />;
+          }
+          if (att.type === 'audio') {
+            return <audio key={index} src={att.url} controls className="w-full" />;
+          }
+          return (
+            <a key={index} href={att.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline text-xs">
+              {att.extra?.fileName as string || 'Download File'}
+            </a>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="py-1.5 group">
       {/* 时间显示 - 仅在时间间隔较大时显示 */}
@@ -120,6 +145,7 @@ export function MessageItemWechat({
                   actionResults={message.actionResults}
                 />
               )}
+              {renderAttachments((message as any).attachments)}
             </div>
             
             {/* 右侧三角形 - 用户消息 */}

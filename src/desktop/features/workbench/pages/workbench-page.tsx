@@ -382,9 +382,6 @@ export function WorkbenchPage() {
                       />
                     </div>
                   </div>
-                  {conv.lastMessage?.text && (
-                    <p className="text-sm text-muted-foreground truncate">{conv.lastMessage.text}</p>
-                  )}
                   <div className="text-[11px] text-muted-foreground">
                     {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleString() : ""}
                   </div>
@@ -462,6 +459,28 @@ export function WorkbenchPage() {
                                 src={att.url}
                                 alt="attachment"
                                 className="max-h-64 rounded border"
+                              />
+                            </div>
+                          );
+                        }
+                        if (att?.type === "video" && att.url) {
+                          return (
+                            <div key={idx} className="mt-2">
+                              <video
+                                src={att.url}
+                                controls
+                                className="max-h-64 rounded border"
+                              />
+                            </div>
+                          );
+                        }
+                        if (att?.type === "audio" && att.url) {
+                          return (
+                            <div key={idx} className="mt-2">
+                              <audio
+                                src={att.url}
+                                controls
+                                className="w-full"
                               />
                             </div>
                           );

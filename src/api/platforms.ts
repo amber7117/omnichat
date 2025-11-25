@@ -95,6 +95,12 @@ const typeMap: Record<string, PlatformType> = {
   WIDGET: 'widget',
   facebook: 'facebook',
   FACEBOOK: 'facebook',
+  wechat: 'wechat',
+  WECHAT: 'wechat',
+  wecom: 'wecom',
+  WECOM: 'wecom',
+  wechaty: 'wechaty',
+  WECHATY: 'wechaty',
 };
 
 const statusMap: Record<string, PlatformStatus> = {
@@ -816,6 +822,146 @@ export async function fetchTelegramStatus(
     return {
       ok: false,
       error: error instanceof Error ? error.message : '获取状态失败'
+    };
+  }
+}
+
+/**
+ * WeChat - Connect Official Account
+ */
+export async function connectWeChat(
+  config: { appId: string; appSecret: string; token: string; encodingAESKey: string },
+  tenantId?: string
+): Promise<PlatformConnectionResponse> {
+  const tid = tenantId || getTenantId();
+  try {
+    const response = await apiPost<BackendChannelInstance>('/api/channels', {
+      name: 'WeChat Official Account',
+      type: 'WECHAT',
+      config,
+    });
+
+    return {
+      ok: true,
+      message: 'WeChat connected successfully',
+      platform: mapChannelToPlatform(response, tid),
+    };
+  } catch (error) {
+    console.error('Failed to connect WeChat:', error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to connect WeChat',
+    };
+  }
+}
+
+/**
+ * WeCom - Connect Enterprise WeChat
+ */
+export async function connectWeCom(
+  config: { corpId: string; agentId: string; secret: string; token: string; encodingAESKey: string },
+  tenantId?: string
+): Promise<PlatformConnectionResponse> {
+  const tid = tenantId || getTenantId();
+  try {
+    const response = await apiPost<BackendChannelInstance>('/api/channels', {
+      name: 'WeCom',
+      type: 'WECOM',
+      config,
+    });
+
+    return {
+      ok: true,
+      message: 'WeCom connected successfully',
+      platform: mapChannelToPlatform(response, tid),
+    };
+  } catch (error) {
+    console.error('Failed to connect WeCom:', error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to connect WeCom',
+    };
+  }
+}
+
+/**
+ * Wechaty - Connect Personal WeChat (Scan QR)
+ */
+export async function connectWechaty(tenantId?: string): Promise<PlatformConnectionResponse> {
+  const tid = tenantId || getTenantId();
+  try {
+    // 1) Create channel instance
+    const created = await apiPost<BackendChannelInstance>('/api/channels', {
+      name: 'Personal WeChat',
+      type: 'WECHATY',
+    });
+
+    // 2) Start bot (will generate QR)
+    await apiPost(`/api/wechaty/${created.id}/start`, {});
+
+    const platform = mapChannelToPlatform(created, tid);
+    platform.status = 'connecting';
+
+    return {
+      ok: true,
+      message: 'Wechaty initialized',
+      platform,
+    };
+  } catch (error) {
+    console.error('Failed to connect Wechaty:', error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to connect Wechaty',
+    };
+  }
+}
+
+/**
+ * Wechaty - Get Status / QR
+ */
+export async function fetchWechatyStatus(channelId: string): Promise<PlatformConnectionResponse & { qrCode?: string; isLoggedIn?: boolean }> {
+  try {
+    const response = await apiGet<{
+      ok: boolean;
+      status: string;
+      isLoggedIn: boolean;
+      user?: { name: string; id: string };
+      qrCode?: string;
+      qrCodeExpiry?: string;
+    }>(`/api/wechaty/${channelId}/status`);
+
+    if (response.ok) {
+      // Construct a platform object from status
+      const platform: Platform = {
+        id: channelId,
+        name: 'Personal WeChat',
+        type: 'wechaty',
+        status: (response.status?.toLowerCase() as PlatformStatus) || 'disconnected',
+        config: {},
+        lastActivity: new Date(),
+        agentCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        meta: {
+          userName: response.user?.name,
+          userId: response.user?.id,
+        }
+      };
+
+      return {
+        ok: true,
+        platform,
+        qrCode: response.qrCode,
+        isLoggedIn: response.isLoggedIn,
+      };
+    }
+
+    return { ok: false, error: 'Failed to get status' };
+  } catch (error) {
+    console.error('Failed to fetch Wechaty status:', error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch status',
     };
   }
 }

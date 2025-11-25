@@ -11,6 +11,8 @@ import { emitToChannel } from '../../../utils/socket';
 import { handleInboundMessage } from '../../inbound/dispatcher';
 import type { InboundAttachment } from '../../../types';
 import { MessageStatus } from '@prisma/client';
+import { storageService } from '../../storage/storage.service';
+import { transcriptionService } from '../../ai/transcription.service';
 
 // ------------------------------------------------------
 // ESM-only Baileys 动态加载适配
@@ -50,7 +52,7 @@ export async function createWhatsAppSocket(channelInstanceId: string, tenantId: 
   const { state, saveCreds } = await usePostgresAuthState(channelInstanceId, tenantId, channelInstanceId);
 
   const baileys = await getBaileys();
-  const { default: makeWASocket, fetchLatestBaileysVersion } = baileys;
+  const { default: makeWASocket, fetchLatestBaileysVersion, downloadMediaMessage } = baileys;
 
   const { version } = await fetchLatestBaileysVersion();
 
@@ -156,8 +158,12 @@ export async function createWhatsAppSocket(channelInstanceId: string, tenantId: 
     );
 
     try {
-      const text = extractText(msg, getContentType);
-      const attachments = extractAttachments(msg, getContentType);
+      let text = extractText(msg, getContentType);
+      const { attachments, transcription, summary } = await processAttachments(msg, getContentType, downloadMediaMessage, logger);
+
+      if (transcription) {
+        text = (text ? text + '\n\n' : '') + transcription;
+      }
       const externalUserId = jidNormalizedUser(msg.key.remoteJid || '');
 
       await handleInboundMessage({
@@ -167,6 +173,8 @@ export async function createWhatsAppSocket(channelInstanceId: string, tenantId: 
         externalUserId,
         externalConversationId: msg.key.remoteJid ?? undefined,
         text,
+        transcription,
+        summary,
         attachments,
         raw: msg,
         timestamp: new Date(Number(msg.messageTimestamp ?? Date.now()) * 1000),
@@ -222,67 +230,74 @@ function extractText(
   return undefined;
 }
 
-function extractAttachments(
+async function processAttachments(
   msg: any,
-  getContentType: (message: any) => string | undefined
-): InboundAttachment[] {
+  getContentType: (message: any) => string | undefined,
+  downloadMediaMessage: any,
+  logger: any
+): Promise<{ attachments: InboundAttachment[]; transcription?: string; summary?: string }> {
   const attachments: InboundAttachment[] = [];
+  let transcription = "";
+  let summary = "";
   const contentType = getContentType(msg.message);
-  if (!contentType) return attachments;
+  if (!contentType) return { attachments };
+
+  const handleMedia = async (media: any, type: 'image' | 'video' | 'audio' | 'file', mimeType: string, ext: string) => {
+    try {
+      // Download media buffer
+      const buffer = await downloadMediaMessage(msg, 'buffer', {});
+
+      // Upload to R2
+      const key = `whatsapp/${msg.key.remoteJid}/${msg.key.id}/${Date.now()}.${ext}`;
+      const url = await storageService.uploadFile(key, buffer, mimeType);
+
+      attachments.push({
+        type,
+        mimeType,
+        url,
+        extra: {
+          fileLength: media.fileLength,
+          mediaKey: media.mediaKey?.toString('base64'),
+          fileSha256: media.fileSha256?.toString('base64'),
+        },
+      });
+
+      // Transcribe/Summarize
+      if (type === 'audio' || type === 'video') {
+        const text = await transcriptionService.transcribeAudio(buffer, `file.${ext}`);
+        if (text) {
+          transcription += `[${type.toUpperCase()} Transcription]:\n${text}\n`;
+
+          if (type === 'video') {
+            const vidSummary = await transcriptionService.summarizeVideo(text);
+            if (vidSummary) {
+              summary += `[Video Summary]:\n${vidSummary}\n`;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.error({ err, msgId: msg.key.id }, `Failed to process ${type} attachment`);
+    // Fallback: push without URL if download failed, or just skip
+    }
+  };
 
   if (contentType === 'imageMessage' && msg.message.imageMessage) {
-    const media = msg.message.imageMessage;
-    attachments.push({
-      type: 'image',
-      mimeType: media.mimetype,
-      url: media.url,
-      extra: {
-        fileLength: media.fileLength,
-        mediaKey: media.mediaKey?.toString('base64'),
-        fileSha256: media.fileSha256?.toString('base64'),
-      },
-    });
+    await handleMedia(msg.message.imageMessage, 'image', msg.message.imageMessage.mimetype, 'jpg');
   }
-  if (contentType === 'videoMessage' && msg.message.videoMessage) {
-    const media = msg.message.videoMessage;
-    attachments.push({
-      type: 'video',
-      mimeType: media.mimetype,
-      url: media.url,
-      extra: {
-        fileLength: media.fileLength,
-        mediaKey: media.mediaKey?.toString('base64'),
-        fileSha256: media.fileSha256?.toString('base64'),
-      },
-    });
+  else if (contentType === 'videoMessage' && msg.message.videoMessage) {
+    await handleMedia(msg.message.videoMessage, 'video', msg.message.videoMessage.mimetype, 'mp4');
   }
-  if (contentType === 'audioMessage' && msg.message.audioMessage) {
-    const media = msg.message.audioMessage;
-    attachments.push({
-      type: 'audio',
-      mimeType: media.mimetype,
-      url: media.url,
-      extra: {
-        fileLength: media.fileLength,
-        mediaKey: media.mediaKey?.toString('base64'),
-        fileSha256: media.fileSha256?.toString('base64'),
-      },
-    });
+  else if (contentType === 'audioMessage' && msg.message.audioMessage) {
+    const ext = msg.message.audioMessage.mimetype.includes('ogg') ? 'ogg' : 'mp3';
+    await handleMedia(msg.message.audioMessage, 'audio', msg.message.audioMessage.mimetype, ext);
   }
-  if (contentType === 'documentMessage' && msg.message.documentMessage) {
+  else if (contentType === 'documentMessage' && msg.message.documentMessage) {
     const media = msg.message.documentMessage;
-    attachments.push({
-      type: 'file',
-      mimeType: media.mimetype,
-      url: media.url,
-      extra: {
-        fileName: media.fileName,
-        fileLength: media.fileLength,
-        fileSha256: media.fileSha256?.toString('base64'),
-      },
-    });
+    const ext = media.fileName?.split('.').pop() || 'bin';
+    await handleMedia(media, 'file', media.mimetype, ext);
   }
-  if (contentType === 'locationMessage' && msg.message.locationMessage) {
+  else if (contentType === 'locationMessage' && msg.message.locationMessage) {
     const loc = msg.message.locationMessage;
     attachments.push({
       type: 'location',
@@ -295,7 +310,7 @@ function extractAttachments(
     });
   }
 
-  return attachments;
+  return { attachments, transcription, summary };
 }
 
 /**
@@ -329,7 +344,7 @@ async function syncRecentHistory(channelInstanceId: string, tenantId: string, so
   }
 
   const baileys = await getBaileys();
-  const { getContentType, jidNormalizedUser } = baileys;
+  const { getContentType, jidNormalizedUser, downloadMediaMessage } = baileys;
 
   for (const jid of chatIds) {
     try {
@@ -339,8 +354,12 @@ async function syncRecentHistory(channelInstanceId: string, tenantId: string, so
       const msgs = await fetchMessages(jid, 10);
       for (const m of msgs) {
         if (!m.message) continue;
-        const text = extractText(m, getContentType);
-        const attachments = extractAttachments(m, getContentType);
+        let text = extractText(m, getContentType);
+        const { attachments, transcription, summary } = await processAttachments(m, getContentType, downloadMediaMessage, logger);
+
+        if (transcription) {
+          text = (text ? text + '\n\n' : '') + transcription;
+        }
         const externalUserId = jidNormalizedUser(m.key.remoteJid || '');
         await handleInboundMessage({
           tenantId,
@@ -349,6 +368,8 @@ async function syncRecentHistory(channelInstanceId: string, tenantId: string, so
           externalUserId,
           externalConversationId: m.key.remoteJid ?? undefined,
           text,
+          transcription,
+          summary,
           attachments,
           raw: m,
           timestamp: new Date(Number(m.messageTimestamp ?? Date.now()) * 1000),

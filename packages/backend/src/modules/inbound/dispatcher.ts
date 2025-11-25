@@ -142,6 +142,8 @@ export async function handleInboundMessage(payload: InboundMessagePayload & { pr
       direction: MessageDirection.INBOUND,
       status: MessageStatus.READ,
       text: payload.text,
+      transcription: payload.transcription,
+      summary: payload.summary,
       attachments: payload.attachments as Prisma.InputJsonValue | undefined,
       rawPayload: payload.raw as Prisma.InputJsonValue,
       externalSenderId: payload.externalUserId,

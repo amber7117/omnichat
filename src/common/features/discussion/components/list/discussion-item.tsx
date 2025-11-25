@@ -222,10 +222,6 @@ export function DiscussionItem({
             </div>
           </div>
         </div>
-        
-        <div className="text-[12px] leading-[1.4] text-muted-foreground/50 truncate mt-[2px]">
-          {discussion.lastMessage || "还没有人发言"}
-        </div>
       </div>
     </div>
   );

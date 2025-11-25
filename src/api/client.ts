@@ -114,7 +114,7 @@ export interface ChannelData {
 }
 
 // 渠道类型
-export type ChannelType = 'whatsapp' | 'telegram-user' | 'telegram-bot' | 'web' | 'email' | 'facebook' | 'wechat';
+export type ChannelType = 'whatsapp' | 'telegram-user' | 'telegram-bot' | 'web' | 'email' | 'facebook' | 'wechat' | 'wecom';
 
 // 渠道配置接口
 export interface ChannelConfig {

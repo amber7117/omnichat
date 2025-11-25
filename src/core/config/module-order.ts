@@ -4,6 +4,7 @@ export enum ModuleOrderEnum {
   CHAT = 10,
   CHANNELS = 15,
   AGENTS = 20,
+  PLUGINS = 25,
   MCP = 30,
   INDEXEDDB = 40,
   FILE_MANAGER = 50,

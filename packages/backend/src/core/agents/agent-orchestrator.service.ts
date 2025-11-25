@@ -12,6 +12,8 @@ interface AgentProcessParams {
   customerId: string;
   lastMessages: Partial<Message>[]; // recent conversation messages
   inboundText: string;
+  inboundTranscription?: string;
+  inboundSummary?: string;
   context?: Record<string, any>;
 }
 
@@ -51,18 +53,26 @@ export async function processAgentMessage(params: AgentProcessParams): Promise<{
 
   // Add conversation history
   for (const m of params.lastMessages) {
-    if (m.text) {
+    let content = m.text || '';
+    if (m.transcription) content += `\n[Audio Transcription]: ${m.transcription}`;
+    if (m.summary) content += `\n[Video Summary]: ${m.summary}`;
+
+    if (content) {
       messages.push({
         role: m.direction === 'OUTBOUND' ? 'assistant' : 'user',
-        content: m.text,
+        content: content,
       });
     }
   }
 
   // Add current user message
+  let currentContent = params.inboundText || '';
+  if (params.inboundTranscription) currentContent += `\n[Audio Transcription]: ${params.inboundTranscription}`;
+  if (params.inboundSummary) currentContent += `\n[Video Summary]: ${params.inboundSummary}`;
+
   messages.push({
     role: 'user',
-    content: params.inboundText,
+    content: currentContent || '(Empty message)',
   });
 
   let replyText: string | null = null;

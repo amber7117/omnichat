@@ -6,15 +6,23 @@ import type { RouteNode } from '../../types/route';
 function renderRoutes(nodes: RouteNode[]): React.ReactNode {
   return nodes
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map(node => (
-      <Route
-        key={node.id}
-        path={node.path}
-        element={node.element}
-      >
-        {node.children && renderRoutes(node.children)}
-      </Route>
-    ));
+    .map(node => {
+      const props: any = {
+        key: node.id,
+        element: node.element,
+      };
+      if (node.index) {
+        props.index = true;
+      } else {
+        props.path = node.path;
+      }
+
+      return (
+        <Route {...props}>
+          {node.children && renderRoutes(node.children)}
+        </Route>
+      );
+    });
 }
 
 export const PluginRouter: React.FC = () => {

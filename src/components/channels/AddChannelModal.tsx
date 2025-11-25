@@ -13,6 +13,7 @@ import { Channel, ChannelType } from '@/types/channel';
 import {
   createWhatsAppChannel,
   createTelegramChannel,
+  createChannel,
   initializeWhatsApp,
   requestTelegramCode,
   submitTelegramCode,
@@ -49,6 +50,13 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
   const [telegramApiHash, setTelegramApiHash] = useState('');
   const [telegramStep, setTelegramStep] = useState<'config' | 'phone' | 'code' | 'connecting'>('config');
   
+  // WeChat/WeCom config
+  const [appId, setAppId] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [token, setToken] = useState('');
+  const [encodingAESKey, setEncodingAESKey] = useState('');
+  const [corpId, setCorpId] = useState('');
+
   const { toast } = useToast();
 
   const resetForm = () => {
@@ -64,6 +72,11 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
     setTelegramApiId('');
     setTelegramApiHash('');
     setTelegramStep('config');
+    setAppId('');
+    setAppSecret('');
+    setToken('');
+    setEncodingAESKey('');
+    setCorpId('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,12 +102,29 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
       } else {
         // 其他渠道类型的处理
         const channelId = generateChannelId(type as ApiChannelType);
+
+        let config = {};
+        if (type === 'wechat') {
+          config = { appId, appSecret, token, encodingAESKey };
+        } else if (type === 'wecom') {
+          config = { corpId, agentId: appId, secret: appSecret, token, encodingAESKey };
+        }
+
+        // Call API to create channel
+        await createChannel({
+          channelId,
+          name,
+          channelType: type as ApiChannelType,
+          config,
+          isActive: true
+        });
+
         const newChannel: Channel = {
           id: channelId,
           name,
           type: type as ChannelType,
           status: 'disconnected' as const,
-          config: {},
+          config,
           agentCount: 0,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -524,9 +554,59 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
                 <SelectItem value="telegram-bot">Telegram</SelectItem>
                 <SelectItem value="web-widget">Web 聊天</SelectItem>
                 <SelectItem value="facebook-messenger">Facebook Messenger</SelectItem>
+                <SelectItem value="wechat">微信公众号</SelectItem>
+                <SelectItem value="wecom">企业微信</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {type === 'wechat' && (
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="font-medium">微信公众号配置</h4>
+              <div>
+                <Label htmlFor="appId">AppID</Label>
+                <Input id="appId" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="开发者ID(AppID)" />
+              </div>
+              <div>
+                <Label htmlFor="appSecret">AppSecret</Label>
+                <Input id="appSecret" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="开发者密码(AppSecret)" />
+              </div>
+              <div>
+                <Label htmlFor="token">Token</Label>
+                <Input id="token" value={token} onChange={(e) => setToken(e.target.value)} placeholder="令牌(Token)" />
+              </div>
+              <div>
+                <Label htmlFor="encodingAESKey">EncodingAESKey</Label>
+                <Input id="encodingAESKey" value={encodingAESKey} onChange={(e) => setEncodingAESKey(e.target.value)} placeholder="消息加解密密钥" />
+              </div>
+            </div>
+          )}
+
+          {type === 'wecom' && (
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="font-medium">企业微信配置</h4>
+              <div>
+                <Label htmlFor="corpId">CorpID</Label>
+                <Input id="corpId" value={corpId} onChange={(e) => setCorpId(e.target.value)} placeholder="企业ID" />
+              </div>
+              <div>
+                <Label htmlFor="agentId">AgentID</Label>
+                <Input id="agentId" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="应用ID" />
+              </div>
+              <div>
+                <Label htmlFor="secret">Secret</Label>
+                <Input id="secret" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="应用Secret" />
+              </div>
+              <div>
+                <Label htmlFor="token">Token</Label>
+                <Input id="token" value={token} onChange={(e) => setToken(e.target.value)} placeholder="令牌(Token)" />
+              </div>
+              <div>
+                <Label htmlFor="encodingAESKey">EncodingAESKey</Label>
+                <Input id="encodingAESKey" value={encodingAESKey} onChange={(e) => setEncodingAESKey(e.target.value)} placeholder="消息加解密密钥" />
+              </div>
+            </div>
+          )}
           
           {error && (
             <div className="bg-red-50 p-3 rounded-md">

@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/common/components/ui/dialog';
 import { Card } from '@/common/components/ui/card';
 import { Button } from '@/common/components/ui/button';
-import { MessageSquare, Send, Bot, Globe, Facebook } from 'lucide-react';
+import { MessageSquare, Send, Bot, Globe, Facebook, MessageCircle, Building2, Smartphone } from 'lucide-react';
 import type { PlatformType } from '@/types/platform';
 
 interface AddPlatformDialogProps {
@@ -51,6 +51,30 @@ const PLATFORM_OPTIONS = [
     icon: Facebook,
     iconColor: 'text-blue-700',
     bgColor: 'bg-blue-50',
+  },
+  {
+    type: 'wechat' as PlatformType,
+    name: 'WeChat Official Account',
+    description: '连接微信公众号',
+    icon: MessageCircle,
+    iconColor: 'text-green-600',
+    bgColor: 'bg-green-50',
+  },
+  {
+    type: 'wecom' as PlatformType,
+    name: 'WeCom',
+    description: '连接企业微信',
+    icon: Building2,
+    iconColor: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+  },
+  {
+    type: 'wechaty' as PlatformType,
+    name: 'Personal WeChat',
+    description: '扫码登录个人微信 (Wechaty)',
+    icon: Smartphone,
+    iconColor: 'text-green-500',
+    bgColor: 'bg-green-50',
   },
 ];
 

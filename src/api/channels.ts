@@ -180,7 +180,8 @@ export function getChannelTypeDisplayName(channelType: ChannelType): string {
         'web': 'Web 聊天',
         'email': '邮件',
         'facebook': 'Facebook',
-        'wechat': '微信'
+        'wechat': '微信',
+        'wecom': '企业微信'
     };
     return names[channelType] || channelType;
 }

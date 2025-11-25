@@ -1,6 +1,6 @@
 // ✅ Platform types for multi-tenant integration management
 
-export type PlatformType = 'whatsapp' | 'telegram' | 'telegram-bot' | 'widget' | 'facebook';
+export type PlatformType = 'whatsapp' | 'telegram' | 'telegram-bot' | 'widget' | 'facebook' | 'wechat' | 'wecom' | 'wechaty';
 
 export type PlatformStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -10,7 +10,7 @@ export type PlatformStatus = 'disconnected' | 'connecting' | 'connected' | 'erro
 export interface Platform {
   id: string;
   name: string;
-  type: 'whatsapp' | 'telegram' | 'telegram-bot' | 'widget' | 'facebook';
+  type: 'whatsapp' | 'telegram' | 'telegram-bot' | 'widget' | 'facebook' | 'wechat' | 'wecom' | 'wechaty';
   status: 'connected' | 'connecting' | 'error' | 'disconnected';
   config: Record<string, unknown>;
   lastActivity: Date;
@@ -46,6 +46,10 @@ export interface PlatformMeta {
   // Facebook
   pageName?: string;
   pageId?: string;
+
+  // Wechaty
+  userName?: string;
+  userId?: string;
 }
 
 export interface WhatsAppQRResponse {

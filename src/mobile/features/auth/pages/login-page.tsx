@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/common/features/auth';
 import { Button } from '@/common/components/ui/button';
 import { Input } from '@/common/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/common/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/common/components/ui/card';
 import { Label } from '@/common/components/ui/label';
 import { Loader2 } from 'lucide-react';
 

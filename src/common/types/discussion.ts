@@ -13,6 +13,12 @@ export interface BaseMessage {
 export interface NormalMessage extends BaseMessage {
   type: "text" | "image" | "audio" | "video";
   content: string;
+  attachments?: Array<{
+    type: string;
+    url: string;
+    mimeType?: string;
+    extra?: Record<string, unknown>;
+  }>;
   mentions?: string[];    // 被 @ 的 agentId 列表
   replyTo?: string;      // 回复某条消息的ID
   status?: 'pending' | 'streaming' | 'completed' | 'error';  // 消息状态

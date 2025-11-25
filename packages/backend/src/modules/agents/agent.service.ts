@@ -53,7 +53,9 @@ export async function handleAutoReply(context: AutoReplyContext) {
     conversationId: context.conversation.id,
     customerId: context.customer.id,
     lastMessages: recentMessages.reverse(),
-    inboundText: context.payload.text,
+    inboundText: context.payload.text || '',
+    inboundTranscription: context.payload.transcription,
+    inboundSummary: context.payload.summary,
     context: context.channelMeta ?? undefined,
   });
 

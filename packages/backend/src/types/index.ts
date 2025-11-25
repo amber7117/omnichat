@@ -1,4 +1,4 @@
-export type ChannelKind = 'whatsapp' | 'telegram-user' | 'telegram-bot' | 'facebook' | 'widget';
+export type ChannelKind = 'whatsapp' | 'telegram-user' | 'telegram-bot' | 'facebook' | 'widget' | 'wechat' | 'wecom';
 
 export interface AuthContext {
   userId: string;
@@ -20,6 +20,8 @@ export interface InboundMessagePayload {
   externalUserId: string;
   externalConversationId?: string;
   text?: string;
+  transcription?: string;
+  summary?: string;
   attachments?: InboundAttachment[];
   raw: unknown;
   timestamp: Date;
