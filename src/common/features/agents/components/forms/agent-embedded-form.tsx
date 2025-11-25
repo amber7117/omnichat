@@ -25,9 +25,29 @@ import {
   MessageSquare,
   Save,
   TrendingUp,
-  User
+  User,
+  Upload,
+  Trash2,
+  File,
+  Loader2
 } from "lucide-react";
 import { useEffect, useState } from "react";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
+
+function authHeaders(): HeadersInit {
+  const token = localStorage.getItem("auth_token");
+  const headers: HeadersInit = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+interface KnowledgeFile {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  createdAt: string;
+}
 
 interface AgentEmbeddedFormProps {
   onSubmit: (agent: Omit<AgentDef, "id">) => void;
@@ -51,6 +71,9 @@ export function AgentEmbeddedForm({
     responseStyle: initialData?.responseStyle || "",
   });
 
+  const [files, setFiles] = useState<KnowledgeFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -63,8 +86,75 @@ export function AgentEmbeddedForm({
         bias: initialData.bias,
         responseStyle: initialData.responseStyle,
       });
+
+      if (initialData.id) {
+        fetchFiles(initialData.id);
+      }
     }
   }, [initialData]);
+
+  const fetchFiles = async (agentId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/agents/${agentId}/knowledge/files`, {
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFiles(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch knowledge files", err);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !initialData?.id) return;
+
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setUploading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/agents/${initialData.id}/knowledge/files`, {
+        method: "POST",
+        headers: authHeaders(), // FormData sets Content-Type automatically
+        body: formData,
+      });
+
+      if (res.ok) {
+        await fetchFiles(initialData.id);
+      } else {
+        const err = await res.json();
+        alert(`Upload failed: ${err.error}`);
+      }
+    } catch (err) {
+      alert("Upload failed");
+    } finally {
+      setUploading(false);
+      // Reset input
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (!initialData?.id || !confirm("Are you sure you want to delete this file?")) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/agents/${initialData.id}/knowledge/files/${fileId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      if (res.ok) {
+        setFiles(files.filter(f => f.id !== fileId));
+      } else {
+        alert("Delete failed");
+      }
+    } catch (err) {
+      alert("Delete failed");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +373,85 @@ export function AgentEmbeddedForm({
           </div>
         </div>
 
+        <Separator />
+
+        {/* 知识库区域 */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h4 className="font-semibold text-base">知识库 (RAG)</h4>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>上传文档</Label>
+                <p className="text-xs text-muted-foreground">
+                  支持 PDF, TXT, MD 等格式。上传后智能体将基于文档内容回答问题。
+                </p>
+              </div>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={uploading || !initialData?.id}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading || !initialData?.id}
+                  onClick={() => document.getElementById("file-upload")?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  {uploading ? "上传中..." : "上传文件"}
+                </Button>
+              </div>
+            </div>
+
+            {!initialData?.id && (
+              <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
+                请先保存智能体，然后才能上传知识库文件。
+              </div>
+            )}
+
+            {files.length > 0 && (
+              <div className="border rounded-md divide-y">
+                {files.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <File className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{file.fileName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.fileSize / 1024).toFixed(1)} KB • {new Date(file.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive/90"
+                      onClick={() => handleDeleteFile(file.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 提交按钮 */}
         <div className="pt-4">
           <Button
@@ -298,4 +467,4 @@ export function AgentEmbeddedForm({
       </form>
     </div>
   );
-} 
+}

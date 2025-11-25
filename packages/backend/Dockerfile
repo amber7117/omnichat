@@ -39,6 +39,9 @@ RUN npm run build
 # 检查 dist 目录结构 (调试用)
 RUN ls -R dist
 
+# 清理开发依赖
+RUN npm prune --production
+
 ########################
 # 2. 运行阶段 (runtime)
 ########################
@@ -63,11 +66,10 @@ RUN set -eux; \
     npm install -g pnpm
 
 COPY package*.json ./
-RUN npm install --omit=dev
+COPY prisma ./prisma
 
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 
 EXPOSE 3001
 
