@@ -33,7 +33,7 @@ export async function uploadKnowledgeFile(agentId: string, file: Express.Multer.
     // 2. Get or Create Vector Store
     let vectorStoreId = kb.openaiVectorStoreId;
     if (!vectorStoreId) {
-      const vs = await client.beta.vectorStores.create({
+        const vs = await (client.beta as any).vectorStores.create({
         name: `KB-Agent-${agentId}`,
       });
       vectorStoreId = vs.id;
@@ -44,7 +44,7 @@ export async function uploadKnowledgeFile(agentId: string, file: Express.Multer.
     }
 
     // 3. Add file to Vector Store
-    await client.beta.vectorStores.files.create(vectorStoreId, {
+      await (client.beta as any).vectorStores.files.create(vectorStoreId, {
       file_id: openaiFile.id,
     });
 
@@ -86,7 +86,7 @@ export async function deleteKnowledgeFile(agentId: string, fileId: string) {
     // 1. Remove from Vector Store
     if (file.knowledgeBase.openaiVectorStoreId) {
       try {
-        await client.beta.vectorStores.files.del(
+          await (client.beta as any).vectorStores.files.del(
           file.knowledgeBase.openaiVectorStoreId,
           file.openaiFileId
         );

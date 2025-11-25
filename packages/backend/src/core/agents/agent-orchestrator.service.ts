@@ -145,7 +145,7 @@ async function processWithAssistant(client: OpenAI, params: AgentProcessParams, 
 
   // 1. Ensure Assistant Exists
   if (!assistantId) {
-    const assistant = await client.beta.assistants.create({
+    const assistant = await (client.beta as any).assistants.create({
       name: params.agent.name,
       instructions: params.agent.prompt || 'You are a helpful assistant.',
       model: params.agent.model || 'gpt-4o',
@@ -168,7 +168,7 @@ async function processWithAssistant(client: OpenAI, params: AgentProcessParams, 
   // 2. Ensure Thread Exists
   let threadId = params.openaiThreadId;
   if (!threadId) {
-    const thread = await client.beta.threads.create();
+    const thread = await (client.beta as any).threads.create();
     threadId = thread.id;
     newThreadId = thread.id;
   }
@@ -177,21 +177,21 @@ async function processWithAssistant(client: OpenAI, params: AgentProcessParams, 
   let content = params.inboundText || '';
   if (params.inboundTranscription) content += `\n[Audio Transcription]: ${params.inboundTranscription}`;
 
-  await client.beta.threads.messages.create(threadId, {
+  await (client.beta as any).threads.messages.create(threadId, {
     role: 'user',
     content: content || '.',
   });
 
   // 4. Run Assistant
-  const run = await client.beta.threads.runs.createAndPoll(threadId, {
+  const run = await (client.beta as any).threads.runs.createAndPoll(threadId, {
     assistant_id: assistantId,
   });
 
   if (run.status === 'completed') {
-    const messages = await client.beta.threads.messages.list(run.thread_id);
+    const messages = await (client.beta as any).threads.messages.list(run.thread_id);
     const lastMessage = messages.data[0];
     if (lastMessage.role === 'assistant') {
-      const textContent = lastMessage.content.find(c => c.type === 'text') as OpenAI.Beta.Threads.Messages.TextContentBlock;
+      const textContent = lastMessage.content.find((c: any) => c.type === 'text') as OpenAI.Beta.Threads.Messages.TextContentBlock;
       return {
         replyText: textContent?.text?.value || null,
         newThreadId
