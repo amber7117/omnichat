@@ -17,7 +17,7 @@ export class WechatyController {
     const { tenantId } = (req as AuthenticatedRequest).user!;
 
     try {
-      const instance = await prisma.channelInstance.findUnique({
+        const instance = await prisma.channelInstance.findFirst({
         where: { id: channelInstanceId, tenantId },
       });
 
@@ -25,7 +25,7 @@ export class WechatyController {
         return res.status(404).json({ error: 'Channel instance not found' });
       }
 
-      if (instance.type !== ChannelType.WECHATY) {
+        if (instance.type !== ChannelType.WECHATY) {
         return res.status(400).json({ error: 'Invalid channel type' });
       }
 
@@ -59,7 +59,7 @@ export class WechatyController {
     const { tenantId } = (req as AuthenticatedRequest).user!;
 
     try {
-      const instance = await prisma.channelInstance.findUnique({
+        const instance = await prisma.channelInstance.findFirst({
         where: { id: channelInstanceId, tenantId },
       });
 

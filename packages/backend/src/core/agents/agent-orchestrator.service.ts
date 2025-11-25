@@ -140,7 +140,7 @@ export async function processAgentMessage(params: AgentProcessParams): Promise<{
 }
 
 async function processWithAssistant(client: OpenAI, params: AgentProcessParams, vectorStoreId: string) {
-  let assistantId = params.agent.openaiAssistantId;
+  let assistantId = (params.agent as any).openaiAssistantId;
   let newThreadId: string | undefined;
 
   // 1. Ensure Assistant Exists
@@ -159,7 +159,7 @@ async function processWithAssistant(client: OpenAI, params: AgentProcessParams, 
     assistantId = assistant.id;
     await prisma.agent.update({
       where: { id: params.agent.id },
-      data: { openaiAssistantId: assistantId },
+      data: { openaiAssistantId: assistantId } as any,
     });
   } else {
     // Optional: Update assistant instructions if changed (skipping for performance)

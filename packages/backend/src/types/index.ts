@@ -1,4 +1,4 @@
-export type ChannelKind = 'whatsapp' | 'telegram-user' | 'telegram-bot' | 'facebook' | 'widget' | 'wechat' | 'wecom';
+export type ChannelKind = 'whatsapp' | 'telegram-user' | 'telegram-bot' | 'facebook' | 'widget' | 'wechat' | 'wecom' | 'wechaty';
 
 export interface AuthContext {
   userId: string;

@@ -17,7 +17,7 @@ const autoReplyCooldownMs = 5_000; // Reduced cooldown for better UX
 const lastAutoReplyMap = new Map<string, number>(); // conversationId -> timestamp
 
 // Simple in-memory cache for agents: tenantId -> { agent, expiresAt }
-const agentCache = new Map<string, { agent: Agent & { knowledgeBase?: any }; expiresAt: number }>();
+const agentCache = new Map<string, { agent: Agent; expiresAt: number }>();
 const AGENT_CACHE_TTL = 60_000 * 5; // 5 minutes
 
 export async function handleAutoReply(context: AutoReplyContext) {
@@ -57,7 +57,7 @@ export async function handleAutoReply(context: AutoReplyContext) {
     inboundTranscription: context.payload.transcription,
     inboundSummary: context.payload.summary,
     context: context.channelMeta ?? undefined,
-    openaiThreadId: context.conversation.openaiThreadId,
+    openaiThreadId: (context.conversation as any).openaiThreadId,
   });
 
   if (!replyText) return;
@@ -134,7 +134,6 @@ async function getCachedDefaultAgent(tenantId: string): Promise<Agent | null> {
   const agent = await prisma.agent.findFirst({
     where: { tenantId, status: 'ACTIVE' },
     orderBy: { createdAt: 'asc' },
-    include: { knowledgeBase: true },
   });
 
   if (agent) {
@@ -148,5 +147,5 @@ export async function listAgents(tenantId: string): Promise<Agent[]> {
 }
 
 export async function getAgent(tenantId: string, id: string): Promise<Agent | null> {
-  return prisma.agent.findFirst({ where: { tenantId, id }, include: { knowledgeBase: true } });
+  return prisma.agent.findFirst({ where: { tenantId, id } });
 }

@@ -9,9 +9,9 @@ const apiKey = process.env.OPENAI_API_KEY;
 const client = apiKey ? new OpenAI({ apiKey }) : null;
 
 export async function getOrCreateKnowledgeBase(agentId: string) {
-  let kb = await prisma.knowledgeBase.findUnique({ where: { agentId } });
+  let kb = await (prisma as any).knowledgeBase.findUnique({ where: { agentId } });
   if (!kb) {
-    kb = await prisma.knowledgeBase.create({
+    kb = await (prisma as any).knowledgeBase.create({
       data: { agentId },
     });
   }
@@ -37,7 +37,7 @@ export async function uploadKnowledgeFile(agentId: string, file: Express.Multer.
         name: `KB-Agent-${agentId}`,
       });
       vectorStoreId = vs.id;
-      await prisma.knowledgeBase.update({
+      await (prisma as any).knowledgeBase.update({
         where: { id: kb.id },
         data: { openaiVectorStoreId: vectorStoreId },
       });
@@ -49,7 +49,7 @@ export async function uploadKnowledgeFile(agentId: string, file: Express.Multer.
     });
 
     // 4. Save to DB
-    const knowledgeFile = await prisma.knowledgeFile.create({
+    const knowledgeFile = await (prisma as any).knowledgeFile.create({
       data: {
         knowledgeBaseId: kb.id,
         fileName: file.originalname,
@@ -73,7 +73,7 @@ export async function uploadKnowledgeFile(agentId: string, file: Express.Multer.
 export async function deleteKnowledgeFile(agentId: string, fileId: string) {
   if (!client) throw new ApiError(500, 'OpenAI API key not configured');
 
-  const file = await prisma.knowledgeFile.findUnique({
+  const file = await (prisma as any).knowledgeFile.findUnique({
     where: { id: fileId },
     include: { knowledgeBase: true },
   });
@@ -103,7 +103,7 @@ export async function deleteKnowledgeFile(agentId: string, fileId: string) {
     }
 
     // 3. Delete from DB
-    await prisma.knowledgeFile.delete({ where: { id: fileId } });
+    await (prisma as any).knowledgeFile.delete({ where: { id: fileId } });
   } catch (err) {
     logger.error({ err, fileId }, 'Failed to delete knowledge file');
     throw new ApiError(500, 'Failed to delete file');
@@ -111,7 +111,7 @@ export async function deleteKnowledgeFile(agentId: string, fileId: string) {
 }
 
 export async function listKnowledgeFiles(agentId: string) {
-  const kb = await prisma.knowledgeBase.findUnique({
+  const kb = await (prisma as any).knowledgeBase.findUnique({
     where: { agentId },
     include: { files: { orderBy: { createdAt: 'desc' } } },
   });
