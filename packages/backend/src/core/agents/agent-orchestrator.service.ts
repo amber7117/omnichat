@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { logger } from '../../utils/logger';
 import { mcpClient } from '../mcp/mcp-client';
+import { prisma } from '../../db/prisma';
 import type { Agent, Message } from '@prisma/client';
 
 interface AgentProcessParams {
@@ -15,9 +16,10 @@ interface AgentProcessParams {
   inboundTranscription?: string;
   inboundSummary?: string;
   context?: Record<string, any>;
+  openaiThreadId?: string | null;
 }
 
-export async function processAgentMessage(params: AgentProcessParams): Promise<{ replyText: string | null; toolCalls?: any[] }> {
+export async function processAgentMessage(params: AgentProcessParams): Promise<{ replyText: string | null; toolCalls?: any[]; newThreadId?: string }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     logger.error('Missing OPENAI_API_KEY');
@@ -28,6 +30,12 @@ export async function processAgentMessage(params: AgentProcessParams): Promise<{
     apiKey,
     baseURL: process.env.OPENAI_BASE_URL || undefined,
   });
+
+  // Check for Knowledge Base
+  const knowledgeBase = (params.agent as any).knowledgeBase;
+  if (knowledgeBase && knowledgeBase.openaiVectorStoreId) {
+    return processWithAssistant(client, params, knowledgeBase.openaiVectorStoreId);
+  }
 
   const model = params.agent.model || process.env.OPENAI_MODEL || 'gpt-4o';
 
@@ -129,4 +137,70 @@ export async function processAgentMessage(params: AgentProcessParams): Promise<{
   }
 
   return { replyText, toolCalls: toolCallsLog };
+}
+
+async function processWithAssistant(client: OpenAI, params: AgentProcessParams, vectorStoreId: string) {
+  let assistantId = params.agent.openaiAssistantId;
+  let newThreadId: string | undefined;
+
+  // 1. Ensure Assistant Exists
+  if (!assistantId) {
+    const assistant = await client.beta.assistants.create({
+      name: params.agent.name,
+      instructions: params.agent.prompt || 'You are a helpful assistant.',
+      model: params.agent.model || 'gpt-4o',
+      tools: [{ type: 'file_search' }],
+      tool_resources: {
+        file_search: {
+          vector_store_ids: [vectorStoreId],
+        },
+      },
+    });
+    assistantId = assistant.id;
+    await prisma.agent.update({
+      where: { id: params.agent.id },
+      data: { openaiAssistantId: assistantId },
+    });
+  } else {
+    // Optional: Update assistant instructions if changed (skipping for performance)
+  }
+
+  // 2. Ensure Thread Exists
+  let threadId = params.openaiThreadId;
+  if (!threadId) {
+    const thread = await client.beta.threads.create();
+    threadId = thread.id;
+    newThreadId = thread.id;
+  }
+
+  // 3. Add Message
+  let content = params.inboundText || '';
+  if (params.inboundTranscription) content += `\n[Audio Transcription]: ${params.inboundTranscription}`;
+
+  await client.beta.threads.messages.create(threadId, {
+    role: 'user',
+    content: content || '.',
+  });
+
+  // 4. Run Assistant
+  const run = await client.beta.threads.runs.createAndPoll(threadId, {
+    assistant_id: assistantId,
+  });
+
+  if (run.status === 'completed') {
+    const messages = await client.beta.threads.messages.list(run.thread_id);
+    const lastMessage = messages.data[0];
+    if (lastMessage.role === 'assistant') {
+      const textContent = lastMessage.content.find(c => c.type === 'text') as OpenAI.Beta.Threads.Messages.TextContentBlock;
+      return {
+        replyText: textContent?.text?.value || null,
+        newThreadId
+      };
+    }
+  } else {
+    logger.error({ run }, 'Assistant run failed');
+    return { replyText: 'Sorry, I encountered an error.', newThreadId };
+  }
+
+  return { replyText: null, newThreadId };
 }

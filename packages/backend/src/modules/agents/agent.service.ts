@@ -17,7 +17,7 @@ const autoReplyCooldownMs = 5_000; // Reduced cooldown for better UX
 const lastAutoReplyMap = new Map<string, number>(); // conversationId -> timestamp
 
 // Simple in-memory cache for agents: tenantId -> { agent, expiresAt }
-const agentCache = new Map<string, { agent: Agent; expiresAt: number }>();
+const agentCache = new Map<string, { agent: Agent & { knowledgeBase?: any }; expiresAt: number }>();
 const AGENT_CACHE_TTL = 60_000 * 5; // 5 minutes
 
 export async function handleAutoReply(context: AutoReplyContext) {
@@ -45,7 +45,7 @@ export async function handleAutoReply(context: AutoReplyContext) {
   });
 
   // 3. Orchestrate Agent (LLM + MCP)
-  const { replyText, toolCalls } = await processAgentMessage({
+  const { replyText, toolCalls, newThreadId } = await processAgentMessage({
     tenantId: context.conversation.tenantId,
     agent,
     channelType: context.channelMeta?.type as string || 'unknown',
@@ -57,6 +57,7 @@ export async function handleAutoReply(context: AutoReplyContext) {
     inboundTranscription: context.payload.transcription,
     inboundSummary: context.payload.summary,
     context: context.channelMeta ?? undefined,
+    openaiThreadId: context.conversation.openaiThreadId,
   });
 
   if (!replyText) return;
@@ -79,10 +80,13 @@ export async function handleAutoReply(context: AutoReplyContext) {
   });
 
   // Fire-and-forget non-critical updates to reduce latency
-  Promise.all([
+  const updates: Promise<any>[] = [
     prisma.conversation.update({
       where: { id: context.conversation.id },
-      data: { lastMessageAt: new Date() },
+      data: {
+        lastMessageAt: new Date(),
+        ...(newThreadId ? { openaiThreadId: newThreadId } : {}),
+      },
     }),
     prisma.channelMessageQueue.create({
       data: {
@@ -98,7 +102,9 @@ export async function handleAutoReply(context: AutoReplyContext) {
         status: QueueStatus.PENDING,
       },
     }),
-  ]).catch((err) => {
+  ];
+
+  Promise.all(updates).catch((err) => {
     logger.error({ err, conversationId: context.conversation.id }, 'Failed to update conversation or queue');
   });
 
@@ -128,6 +134,7 @@ async function getCachedDefaultAgent(tenantId: string): Promise<Agent | null> {
   const agent = await prisma.agent.findFirst({
     where: { tenantId, status: 'ACTIVE' },
     orderBy: { createdAt: 'asc' },
+    include: { knowledgeBase: true },
   });
 
   if (agent) {
@@ -141,5 +148,5 @@ export async function listAgents(tenantId: string): Promise<Agent[]> {
 }
 
 export async function getAgent(tenantId: string, id: string): Promise<Agent | null> {
-  return prisma.agent.findFirst({ where: { tenantId, id } });
+  return prisma.agent.findFirst({ where: { tenantId, id }, include: { knowledgeBase: true } });
 }
