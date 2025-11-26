@@ -10,7 +10,6 @@ import { AddChannelModal } from './AddChannelModal';
 import { EditChannelModal } from './EditChannelModal';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { deleteChannel } from '../../lib/api';
-import { apiGet } from '@/api/client';
 import { useToast } from '@/core/hooks/use-toast';
 import { Button } from '../../common/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -27,22 +26,6 @@ export function ChannelList({ channels, onChannelsChange, onDisconnect }: Channe
   const [deletingChannel, setDeletingChannel] = useState<Channel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-
-  const handleAddChannelClick = async () => {
-    try {
-      const response = await apiGet<{ maxChannels: number; currentChannels: number }>('/api/channels/limits');
-      if (response && typeof response.maxChannels === 'number') {
-        if (response.currentChannels >= response.maxChannels) {
-          alert('Channel limit reached. Please contact support to upgrade.');
-          return;
-        }
-      }
-      setIsAddModalOpen(true);
-    } catch (error) {
-      console.error('Failed to check limits:', error);
-      setIsAddModalOpen(true);
-    }
-  };
 
   const handleAddChannel = (newChannel: Channel) => {
     onChannelsChange([...channels, newChannel]);
@@ -107,7 +90,7 @@ export function ChannelList({ channels, onChannelsChange, onDisconnect }: Channe
         <div className="space-y-4">
           <p className="text-gray-500">暂无渠道，请点击下方按钮添加渠道</p>
           <Button
-            onClick={handleAddChannelClick}
+            onClick={() => setIsAddModalOpen(true)}
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -129,7 +112,7 @@ export function ChannelList({ channels, onChannelsChange, onDisconnect }: Channe
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">渠道列表</h2>
         <Button
-          onClick={handleAddChannelClick}
+          onClick={() => setIsAddModalOpen(true)}
           className="gap-2"
         >
           <Plus className="w-4 h-4" />
