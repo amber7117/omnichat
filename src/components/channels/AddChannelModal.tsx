@@ -4,7 +4,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../common/components/ui/dialog';
 import { Button } from '../../common/components/ui/button';
 import { Input } from '../../common/components/ui/input';
@@ -60,7 +59,6 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const resetForm = () => {
     setName('');
@@ -510,9 +508,9 @@ export function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={() => {
               onClose();
-              navigate('/pricing');
+              alert('Please contact support to upgrade.');
             }}>
-              View Pricing
+              Contact Support
             </Button>
           </DialogFooter>
         </DialogContent>

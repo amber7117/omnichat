@@ -4,7 +4,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Channel } from '@/types/channel';
 import { ChannelCard } from './ChannelCard';
 import { AddChannelModal } from './AddChannelModal';
@@ -28,16 +27,13 @@ export function ChannelList({ channels, onChannelsChange, onDisconnect }: Channe
   const [deletingChannel, setDeletingChannel] = useState<Channel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleAddChannelClick = async () => {
     try {
       const response = await apiGet<{ maxChannels: number; currentChannels: number }>('/api/channels/limits');
       if (response && typeof response.maxChannels === 'number') {
         if (response.currentChannels >= response.maxChannels) {
-          if (confirm('Channel limit reached. Upgrade to add more channels?')) {
-            navigate('/pricing');
-          }
+          alert('Channel limit reached. Please contact support to upgrade.');
           return;
         }
       }

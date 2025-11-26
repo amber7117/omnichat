@@ -3,7 +3,6 @@
 // Updated: 2025-11-21 - Complete redesign with stats, filters, and enhanced UX
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/common/components/ui/button';
 import { Card, CardContent } from '@/common/components/ui/card';
 import { Badge } from '@/common/components/ui/badge';
@@ -45,7 +44,6 @@ import {
 
 export function PlatformsPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const tenantId = user?.tenantId || 'default-tenant';
   const tenantName = user?.name || user?.email || 'Guest';
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -75,9 +73,7 @@ export function PlatformsPage() {
       const response = await apiGet<{ maxChannels: number; currentChannels: number }>('/api/channels/limits');
       if (response && typeof response.maxChannels === 'number') {
         if (response.currentChannels >= response.maxChannels) {
-          if (confirm('Channel limit reached. Upgrade to add more channels?')) {
-            navigate('/pricing');
-          }
+          alert('Channel limit reached. Please contact support to upgrade.');
           return;
         }
       }
