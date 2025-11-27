@@ -53,11 +53,15 @@ async function processInboundUpdate(tenantId: string, channelInstanceId: string,
   const text = message.text || (message.caption ?? undefined);
   const attachments: InboundAttachment[] = extractAttachments(message);
 
+  const from = message.from;
+  const name = from ? [from.first_name, from.last_name].filter(Boolean).join(' ') : undefined;
+
   await handleInboundMessage({
     tenantId,
     channelInstanceId,
     channelType: 'telegram-bot',
     externalUserId,
+    externalUserName: name,
     externalConversationId,
     text: text ?? undefined,
     attachments,

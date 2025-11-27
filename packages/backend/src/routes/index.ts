@@ -9,6 +9,7 @@ import wecomRoutes from '../modules/channels/wecom/wecom.routes';
 import wechatyRoutes from '../modules/channels/wechaty/wechaty.routes';
 import conversationRoutes from '../modules/conversations/conversation.routes';
 import agentRoutes from '../modules/agents/agent.routes';
+import osintRoutes from '../modules/osint/osint.routes';
 
 export function registerRoutes(app: Express): void {
   app.use('/api/auth', authRoutes);
@@ -21,4 +22,5 @@ export function registerRoutes(app: Express): void {
   app.use('/api/wechaty', wechatyRoutes);
   app.use('/api/conversations', conversationRoutes);
   app.use('/api/agents', agentRoutes);
+  app.use('/api/osint', osintRoutes);
 }

@@ -90,6 +90,9 @@ export async function createWhatsAppSocket(channelInstanceId: string, tenantId: 
     }
 
     if (connection === 'open') {
+      const user = sock.user;
+      const phoneNumber = user?.id ? user.id.split(':')[0].split('@')[0] : undefined;
+
       await prisma.channelInstance.update({
         where: { id: channelInstanceId },
         data: {
@@ -99,10 +102,11 @@ export async function createWhatsAppSocket(channelInstanceId: string, tenantId: 
           lastConnectedAt: new Date(),
           lastError: null,
           lastErrorAt: null,
+          externalId: phoneNumber, // Save the phone number
         },
       });
-      emitToChannel(channelInstanceId, 'whatsapp-connected', { tenantId, channelInstanceId });
-      logger.info({ channelInstanceId }, 'WhatsApp connection established');
+      emitToChannel(channelInstanceId, 'whatsapp-connected', { tenantId, channelInstanceId, phoneNumber });
+      logger.info({ channelInstanceId, phoneNumber }, 'WhatsApp connection established');
 
       // 在连接建立后尝试同步最近历史消息
       syncRecentHistory(channelInstanceId, tenantId, sock).catch((err) => {
@@ -166,11 +170,26 @@ export async function createWhatsAppSocket(channelInstanceId: string, tenantId: 
       }
       const externalUserId = jidNormalizedUser(msg.key.remoteJid || '');
 
+      let externalUserName = msg.pushName || undefined;
+      const isGroup = msg.key.remoteJid?.endsWith('@g.us');
+
+      if (isGroup && msg.key.remoteJid) {
+        try {
+          // Attempt to get group subject for the conversation name
+          const meta = await sock.groupMetadata(msg.key.remoteJid);
+          externalUserName = meta.subject;
+        } catch (err) {
+          // Fallback or ignore
+          logger.warn({ err, jid: msg.key.remoteJid }, 'Failed to fetch group metadata');
+        }
+      }
+
       await handleInboundMessage({
         tenantId,
         channelInstanceId,
         channelType: 'whatsapp',
         externalUserId,
+        externalUserName,
         externalConversationId: msg.key.remoteJid ?? undefined,
         text,
         transcription,
@@ -366,6 +385,7 @@ async function syncRecentHistory(channelInstanceId: string, tenantId: string, so
           channelInstanceId,
           channelType: 'whatsapp',
           externalUserId,
+          externalUserName: m.pushName || undefined,
           externalConversationId: m.key.remoteJid ?? undefined,
           text,
           transcription,

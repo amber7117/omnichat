@@ -50,7 +50,10 @@ export async function createWechatyBot(channelInstanceId: string, tenantId: stri
   botMap.set(channelInstanceId, bot);
 
   bot.on('scan', async (qrcode, status) => {
-    if (status === ScanStatus.Waiting || status === ScanStatus.Timeout) {
+    logger.info({ channelInstanceId, status: ScanStatus[status], qrcodeLength: qrcode?.length }, 'Wechaty scan event');
+
+    // Always update DB and emit event when we get a QR code
+    if (qrcode) {
       const expiresAt = new Date(Date.now() + 60_000); // QR usually valid for short time
       
       await prisma.channelInstance.update({
@@ -69,8 +72,6 @@ export async function createWechatyBot(channelInstanceId: string, tenantId: stri
         qr: qrcode, 
         status: ScanStatus[status] 
       });
-      
-      logger.info({ channelInstanceId, status: ScanStatus[status] }, 'Wechaty QR generated');
     }
   });
 

@@ -18,6 +18,8 @@ export interface InboundMessagePayload {
   channelInstanceId: string;
   channelType: ChannelKind | string;
   externalUserId: string;
+  externalUserName?: string;
+  externalUserAvatar?: string;
   externalConversationId?: string;
   text?: string;
   transcription?: string;

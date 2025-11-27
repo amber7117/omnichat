@@ -25,6 +25,14 @@ export const ConversationController = {
 
       const result = conversations.map((conv) => {
         const last = conv.messages?.[0];
+        let phoneNumber: string | undefined;
+        if (conv.channelInstance.type === 'WHATSAPP' && conv.customer.externalId) {
+          // Only extract phone number if it's NOT a group
+          if (!conv.customer.externalId.endsWith('@g.us')) {
+            phoneNumber = conv.customer.externalId.split('@')[0];
+          }
+        }
+
         return {
           id: conv.id,
           channelInstanceId: conv.channelInstanceId,
@@ -34,6 +42,7 @@ export const ConversationController = {
             name: conv.customer.name ?? conv.customer.externalUsername ?? conv.customer.externalId,
             externalId: conv.customer.externalId,
           },
+          phoneNumber,
           status: conv.status,
           lastMessageAt: conv.updatedAt,
           autoReplyEnabled: conv.autoReplyEnabled,

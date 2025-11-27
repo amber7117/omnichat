@@ -105,6 +105,7 @@ async function getOrCreateClient(channelInstanceId: string, sessionString: strin
           channelInstanceId,
           channelType: 'telegram_user',
           externalUserId: senderId,
+          externalUserName: senderName.trim() || undefined,
           externalConversationId: senderId, // For DM, conversation ID is usually the user ID
           text,
           attachments: [], // TODO: Extract attachments

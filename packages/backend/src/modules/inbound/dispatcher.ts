@@ -78,11 +78,17 @@ export async function handleInboundMessage(payload: InboundMessagePayload & { pr
           externalId: payload.externalUserId,
         },
       },
-      update: { lastContactedAt: payload.timestamp },
+      update: {
+        lastContactedAt: payload.timestamp,
+        name: payload.externalUserName || undefined,
+        profileImage: payload.externalUserAvatar || undefined,
+      },
       create: {
         tenantId: payload.tenantId,
         channelInstanceId: payload.channelInstanceId,
         externalId: payload.externalUserId,
+        name: payload.externalUserName,
+        profileImage: payload.externalUserAvatar,
         lastContactedAt: payload.timestamp,
       },
       select: { id: true },
